@@ -25,9 +25,31 @@ colnames(X)[ncol(X)] <- "y"
 
 # Repeated k-fold Cross Validation 설정
 train_control <- trainControl(method = "repeatedcv", number = 5, repeats = 10)
+'''
+    trainControl`s argument explain.
+    Reference: "https://www.rdocumentation.org/packages/caret/versions/6.0-92/topics/trainControl"
+    number is how many fold you want to use. You set 5, then, it means 5-fold cross cv in repeatedcv.
+    repeats is only used when you set repeated CV. (repeats: For repeated k-fold cross-validation only: the number of complete sets of folds to compute)
+    U set repeats as 10, that means -> 10 times repeat of 5-fold cross-validation.
+    So, If you want to 1000 time iterations: set repeats as 1000. it will automately run 1000 times iteration.
+    You can see iteration numbers verboseIter=TRUE
+
+'''
+
 
 # SNP 중요도를 저장할 행렬
 importance_scores <- matrix(NA, nrow = 10, ncol = ncol(X) - 1)  
+
+'''
+    Importance score was calculated using varImp functions.
+
+    e.g)
+        model = train(formula, data=data, method=svr, ~~~)
+        importance = varImp(model, scale=~~)
+'''
+
+
+
 
 # 10번 반복하여 경험적 임계값 계산
 for (i in 1:10) {
