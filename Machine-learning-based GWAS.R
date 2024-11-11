@@ -9,6 +9,8 @@ library(tidyverse)
 library(caret)
 library(scales)
 library(doMC)
+
+# 병렬 처리 설정 (5개 코어)
 registerDoMC(cores = 5)
 
 # 데이터 불러오기
@@ -30,8 +32,8 @@ estimate_threshold <- function(X, model, num_iter, alpha) {
   # 교차검증 설정 (5-fold)
   train_control <- trainControl(method = "cv", number = 5)
   
-  # 변수 중요도를 저장할 행렬 (각 변수에 대한 중요도)
-  importance_scores <- matrix(NA, nrow = num_iter, ncol = ncol(X) - 1)
+  # 변수 중요도를 저장할 벡터 (각 반복에서 가장 높은 중요도 추출)
+  importance_scores <- vector("list", num_iter)
   
   # 반복문을 통한 모델 학습
   for (i in 1:num_iter) {
@@ -52,22 +54,19 @@ estimate_threshold <- function(X, model, num_iter, alpha) {
     # 각 변수의 중요도 중에서 가장 큰 값 추출하여 저장
     highest_importance_score <- max(var_imp$importance[, 1])
     
-    # 중요도 값을 모두 저장 (각 SNP에 대해 중요도 저장)
-    importance_scores[i, ] <- highest_importance_score
+    # 중요도 점수를 리스트에 저장 (반복마다 최고 점수)
+    importance_scores[[i]] <- highest_importance_score
   }
   
   # 중요도 점수를 0에서 100 사이로 스케일링
-  importance_scaled <- apply(importance_scores, 2, function(x) rescale(x, to = c(0, 100)))
-  
-  # 모든 반복에서 나온 중요도 점수를 결합
-  all_importance_scores <- data.frame(importance_scaled)
+  importance_scaled <- sapply(importance_scores, rescale, to = c(0, 100))
   
   # 유의미한 임계값 계산 (alpha 비율을 기반으로)
-  threshold <- apply(all_importance_scores, 2, function(x) quantile(x, 1 - alpha))
+  threshold <- quantile(importance_scaled, 1 - alpha)
   
   return(threshold)
 }
 
 # RF 모델을 사용하여 threshold 계산
 threshold <- estimate_threshold(X, model = "RF", num_iter = 10, alpha = 0.05)
-print(paste("Empirical significance threshold :", threshold))
+print(paste("Empirical significance threshold:", threshold))
