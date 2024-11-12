@@ -29,7 +29,10 @@ colnames(X)[ncol(X)] <- "y"
 # Empirical distribution 기반 threshold 계산
 estimate_threshold <- function(X, model, num_iter, alpha) {
   
-  # 교차검증 설정 (5-fold)
+  # GED: global empirical distirbution
+  ged = c()
+
+    # 교차검증 설정 (5-fold)
   train_control <- trainControl(method = "cv", number = 5)
   
   # 변수 중요도를 저장할 벡터 (각 반복에서 가장 높은 중요도 추출)
@@ -52,19 +55,21 @@ estimate_threshold <- function(X, model, num_iter, alpha) {
     var_imp <- varImp(estimate, scale = FALSE)
     
     # 각 변수의 중요도 중에서 가장 큰 값 추출하여 저장
-    highest_importance_score <- max(var_imp$importance[, 1])
-    
+    # highest_importance_score <- max(var_imp$importance[, 1])
+    ged = c(ged, max(var_imp$importance[, 1]))  # 분포만 필요하기 때문에 값만 저장: 메모리 사용 축소
+
     # 중요도 점수를 리스트에 저장 (반복마다 최고 점수)
-    importance_scores[[i]] <- highest_importance_score
   }
   
-  # 중요도 점수를 0에서 100 사이로 스케일링
-  importance_scaled <- sapply(importance_scores, rescale, to = c(0, 100))
+  global_empirical_threshold <- quantile(x, 1-alpha)  # quantile을 이용하여 상위 5% 값 도출
+#   # 중요도 점수를 0에서 100 사이로 스케일링
+#   importance_scaled <- sapply(importance_scores, rescale, to = c(0, 100))
   
-  # 유의미한 임계값 계산 (alpha 비율을 기반으로)
-  threshold <- quantile(importance_scaled, 1 - alpha)
+#   # 유의미한 임계값 계산 (alpha 비율을 기반으로)
+#   threshold <- quantile(importance_scaled, 1 - alpha)
   
-  return(threshold)
+#   return(threshold)
+    return(global_empirical_threshold)
 }
 
 # RF 모델을 사용하여 threshold 계산
