@@ -29,23 +29,48 @@ train_control <- trainControl(method = "repeatedcv", number = 5, repeats = 10)
 # SNP 중요도를 저장할 행렬
 importance_scores <- matrix(NA, nrow = 10, ncol = ncol(X) - 1)  
 
-# 10번 반복하여 경험적 임계값 계산
-for (i in 1:10) {
+# Empirical distribution 기반 threshold 계산
+estimate_threshold <- function(X, model, num_iter, alpha) {
   
-  set.seed(i) # 매 반복마다 다른 시드를 설정하여, 교차 검증 분할이 다르게 이루어짐
+  # 교차검증 설정 (5-fold)
+  train_control <- trainControl(method = "cv", number = 5)
   
-  # SVM 모델 훈련
-  svm_model <- train(y ~ ., data = X, method = "svmRadial", trControl = train_control,  
-                     preProcess = c("center", "scale"))
+  # 변수 중요도를 저장할 벡터 (각 반복에서 가장 높은 중요도 추출)
+  importance_scores <- vector("list", num_iter)
   
-  # 변수 중요도 추출
-  var_imp <- varImp(svm_model, scale = FALSE)  # 중요도 추출
+  # 반복문을 통한 모델 학습
+  for (i in 1:num_iter) {
+    set.seed(i)  # 반복마다 시드를 다르게 설정
+	
+	train_idx <- createDataPartition(y = X$y, p = 0.8, list = FALSE)
+	X_train <- X[train_idx, ]
+    
+    # 모델 학습 (RF 또는 SVR)
+    if (model == "RF") {
+      estimate <- train(y ~ ., data = X_train, method = "rf", trControl = train_control,
+                        preProcess = c("center", "scale"))
+    } else if (model == "SVR") {
+      estimate <- train(y ~ ., data = X_train, method = "svmRadial", trControl = train_control,
+                        preProcess = c("center", "scale"))
+    }
+    
+    # 변수 중요도 추출
+    var_imp <- varImp(estimate, scale = FALSE)
+    
+    # 각 변수의 중요도 중에서 가장 큰 값 추출하여 저장
+    highest_importance_score <- max(var_imp$importance[, 1])
+    
+    # 중요도 점수를 리스트에 저장 (반복마다 최고 점수)
+    importance_scores[[i]] <- highest_importance_score
+  }
   
-  # 중요도 데이터를 데이터프레임으로 변환
-  importance_scores_df <- as.data.frame(var_imp$importance)
+  # 중요도 점수를 0에서 100 사이로 스케일링
+  importance_scaled <- sapply(importance_scores, rescale, to = c(0, 100))
   
-  # 중요도 값 저장
-  importance_scores[i, ] <- importance_scores_df$Overall
+  # 유의미한 임계값 계산 (alpha 비율을 기반으로)
+  threshold <- quantile(importance_scaled, 1 - alpha)
+  
+  return(threshold)
 }
 
 # 0-100 스케일로 중요도 값 변환
