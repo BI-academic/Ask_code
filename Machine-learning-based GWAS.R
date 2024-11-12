@@ -41,9 +41,8 @@ estimate_threshold <- function(X, model, num_iter, alpha) {
   # 반복문을 통한 모델 학습
   for (i in 1:num_iter) {
     set.seed(i)  # 반복마다 시드를 다르게 설정
-	
-	train_idx <- createDataPartition(y = X$y, p = 0.8, list = FALSE)
-	X_train <- X[train_idx, ]
+    train_idx <- createDataPartition(y = X$y, p = 0.8, list = FALSE)
+    X_train <- X[train_idx, ]
     
     # 모델 학습 (RF 또는 SVR)
     if (model == "RF") {
@@ -63,15 +62,6 @@ estimate_threshold <- function(X, model, num_iter, alpha) {
     # 중요도 점수를 리스트에 저장 (반복마다 최고 점수)
     importance_scores[[i]] <- highest_importance_score
   }
-  
-  # 중요도 점수를 0에서 100 사이로 스케일링
-  importance_scaled <- sapply(importance_scores, rescale, to = c(0, 100))
-  
-  # 유의미한 임계값 계산 (alpha 비율을 기반으로)
-  threshold <- quantile(importance_scaled, 1 - alpha)
-  
-  return(threshold)
-}
 
 # 0-100 스케일로 중요도 값 변환
 importance_scaled <- apply(importance_scores, 2, function(x) rescale(x, to = c(0, 100)))
