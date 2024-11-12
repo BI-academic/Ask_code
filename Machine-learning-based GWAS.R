@@ -26,14 +26,8 @@ colnames(X)[ncol(X)] <- "y"
 # Repeated k-fold Cross Validation 설정
 train_control <- trainControl(method = "repeatedcv", number = 5, repeats = 10)
 
-# SNP 중요도를 저장할 행렬
-importance_scores <- matrix(NA, nrow = 10, ncol = ncol(X) - 1)  
-
 # Empirical distribution 기반 threshold 계산
 estimate_threshold <- function(X, model, num_iter, alpha) {
-  
-  # 교차검증 설정 (5-fold)
-  train_control <- trainControl(method = "cv", number = 5)
   
   # 변수 중요도를 저장할 벡터 (각 반복에서 가장 높은 중요도 추출)
   importance_scores <- vector("list", num_iter)
